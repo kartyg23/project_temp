@@ -54,7 +54,7 @@ class DDPM():
             print(f"Epoch [{epoch+1}/{numEpochs}]")
             for i, (batch, y) in tqdm(enumerate(dataloader), total = len(dataloader)):
                 batch = batch.to(self.device)
-
+                y = y.to(self.device)
                 ts = torch.randint(0, self.timesteps, (batch.shape[0], ), device = self.device)
                 encodedImages, epsilon = self.addNoise(batch, ts)
                 predictedNoise = self.UNet(encodedImages, ts, class_labels=y).sample
