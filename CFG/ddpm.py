@@ -90,14 +90,14 @@ class DDPM():
         return encodedImages, epsilon
     
     @torch.inference_mode()
-    def generate(self, numImages): #Reverse process
+    def generate(self, numImages,labels=torch.tensor([0,1,2,3,4,5,6,7,8,9])): #Reverse process
         x_Ts = []
         x_T = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) #Starting with random noise
         x_Ts.append(self.tensor2numpy(x_T.cpu()))
-
-        for t in tqdm(torch.arange(self.timesteps - 1, -1, -1, device = self.device)):
+        labels = labels.to(self.device)
+        for t in tqdm(zip(torch.arange(self.timesteps - 1, -1, -1, device = self.device))):
             z = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) 
-            epsilon_theta = self.UNet(x_T, t).sample # Predicted Noise
+            epsilon_theta = self.UNet(x_T, t, labels).sample # Predicted Noise
 
             mean = (1 / self.alphas[t].sqrt()) * (x_T - ((1 - self.alphas[t])/(1 - self.alpha_cumprod[t]).sqrt()) * epsilon_theta) ##DDPM Inference Step
             
