@@ -95,7 +95,7 @@ class DDPM():
         x_T = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) #Starting with random noise
         x_Ts.append(self.tensor2numpy(x_T.cpu()))
         labels = labels.to(self.device)
-        for t in tqdm(zip(torch.arange(self.timesteps - 1, -1, -1, device = self.device))):
+        for t in tqdm(torch.arange(self.timesteps - 1, -1, -1, device = self.device)):
             z = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) 
             epsilon_theta = self.UNet(x_T, t, labels).sample # Predicted Noise
 
