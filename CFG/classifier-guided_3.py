@@ -174,7 +174,7 @@ class DDPM():
 
             #Calculating Classifier Gradients
             x_T.requires_grad_(True)
-            loss = F.cross_entropy(self.clf(self.renorm(x_T)), torch.LongTensor([args.label] * numImages).to(self.device))
+            loss = F.cross_entropy(self.clf(self.renorm(x_T)), torch.LongTensor(args.labels).to(self.device))
             logits = self.clf(self.renorm(x_T))
             out = logits.argmax(-1)
             print(out)
@@ -195,7 +195,14 @@ class DDPM():
         images = (images * 255).astype('uint8')
         return images
 
-
+def str_to_int_list(s):
+    """
+    Convert a string of comma-separated integers into a list of integers.
+    """
+    try:
+        return list(map(int, s.split(',')))
+    except ValueError:
+        raise argparse.ArgumentTypeError("List must be a comma-separated list of integers.")
         
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser()
@@ -210,7 +217,8 @@ if __name__ == "__main__" :
     parser.add_argument("--lr", type = float, default = 1e-3)
     parser.add_argument("--num-epochs", type = int, default = 5)
     parser.add_argument("--num-images", type = int, default = 2)
-    parser.add_argument("--label", type = int, default = 8)
+    # parser.add_argument("--label", type = int, default = 8)
+    parser.add_argument("--labels", type=str_to_int_list, required=True, help="Comma-separated list of integers")
     parser.add_argument("--num-epochs-clf", type = int, default = 5)
     parser.add_argument("--lr-clf", type = float, default = 1e-3)
     parser.add_argument("--guidance-scale", type = float, default = 1)
