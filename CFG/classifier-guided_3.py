@@ -175,6 +175,9 @@ class DDPM():
             #Calculating Classifier Gradients
             x_T.requires_grad_(True)
             loss = F.cross_entropy(self.clf(self.renorm(x_T)), torch.LongTensor([args.label] * numImages).to(self.device))
+            logits = self.clf(self.renorm(x_T))
+            out = logits.argmax(-1)
+            print(out)
             loss.backward()
             grads = x_T.grad.data
             x_T.requires_grad_(False)
