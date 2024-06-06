@@ -11,7 +11,6 @@ import torch.nn.functional as F
 from diffusers import UNet2DModel
 import torchvision.transforms as T
 from transformer_package.models import ViT
-from efficientnet_pytorch import EfficientNet
 
 warnings.filterwarnings("ignore")
 
@@ -46,18 +45,6 @@ class Resnet_mnist(nn.Module):
 	def forward(self, t):		
 		return self.model(t)
 
-class EffNetMNIST(nn.Module):
-    def __init__(self):
-        super(EffNetMNIST, self).__init__()
-        
-        self.model_name = 'efficientnet-b0'
-        self.model = EfficientNet.from_pretrained(self.model_name)
-        del self.model._fc
-        self.model._fc = nn.Linear(1280, 10)
-        
-    def forward(self, x):
-        return self.model(x)
-
 class vit_mnist(nn.Module):
     def __init__(self):
         super(vit_mnist,self).__init__()
@@ -81,7 +68,7 @@ class DDPM():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
-        self.clf = EffNetMNIST().to(self.device)
+        self.clf = Resnet_mnist().to(self.device)
 
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
@@ -242,7 +229,7 @@ if __name__ == "__main__" :
     parser.add_argument("--log-step", type = int, default = 50)
     parser.add_argument("--checkpoint-step", type = int, default = 50)
     parser.add_argument("--unet-checkpoint", default = "unet_clf_500.ckpt", type = str)
-    parser.add_argument("--clf-checkpoint", default = "vit_500.ckpt", type = str)
+    parser.add_argument("--clf-checkpoint", default = "clf_500.ckpt", type = str)
     parser.add_argument("--batch-size", type = int, default = 64)
     parser.add_argument("--lr", type = float, default = 1e-3)
     parser.add_argument("--num-epochs", type = int, default = 5)
