@@ -257,7 +257,7 @@ if __name__ == "__main__" :
         "AttnDownBlock2D",
     ),
     up_block_types = (
-        "AttnDownBlock2D",
+        "AttnUpBlock2D",
         "AttnUpBlock2D",
         "UpBlock2D",
         "UpBlock2D",
