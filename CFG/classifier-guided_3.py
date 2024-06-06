@@ -10,6 +10,7 @@ from tqdm.auto import tqdm
 import torch.nn.functional as F
 from diffusers import UNet2DModel
 import torchvision.transforms as T
+from transformer_package.models import ViT
 
 warnings.filterwarnings("ignore")
 
@@ -44,6 +45,22 @@ class Resnet_mnist(nn.Module):
 	def forward(self, t):		
 		return self.model(t)
 
+class vit_mnist(nn.Module):
+    def __init__(self):
+        super(vit_mnist,self).__init__()
+        self.image_size = 28
+        self.channel_size = 1
+        self.patch_size = 7
+        self.embed_size = 512
+        self.num_heads = 8
+        self.classes = 10
+        self.num_layers = 3
+        self.hidden_size = 256
+        self.dropout = 0.2
+        self.model = ViT(self.image_size, self.channel_size, self.patch_size, self.embed_size, self.num_heads, self.classes, self.num_layers, self.hidden_size, dropout=self.dropout)
+
+    def forward(self, t):		
+        return self.model(t)
 
 class DDPM():
     def __init__(self, betaStart, betaEnd, timesteps, UNetConfig ,
@@ -51,7 +68,7 @@ class DDPM():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
-        self.clf = Resnet_mnist().to(self.device)
+        self.clf = vit_mnist().to(self.device)
 
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
@@ -212,7 +229,7 @@ if __name__ == "__main__" :
     parser.add_argument("--log-step", type = int, default = 50)
     parser.add_argument("--checkpoint-step", type = int, default = 50)
     parser.add_argument("--unet-checkpoint", default = "unet_clf_500.ckpt", type = str)
-    parser.add_argument("--clf-checkpoint", default = "clf_500.ckpt", type = str)
+    parser.add_argument("--clf-checkpoint", default = "vit_500.ckpt", type = str)
     parser.add_argument("--batch-size", type = int, default = 64)
     parser.add_argument("--lr", type = float, default = 1e-3)
     parser.add_argument("--num-epochs", type = int, default = 5)
