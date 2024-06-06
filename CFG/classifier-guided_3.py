@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from diffusers import UNet2DModel
 import torchvision.transforms as T
 from transformer_package.models import ViT
+from efficientnet_pytorch import EfficientNet
 
 warnings.filterwarnings("ignore")
 
@@ -44,6 +45,18 @@ class Resnet_mnist(nn.Module):
 
 	def forward(self, t):		
 		return self.model(t)
+
+class EffNetMNIST(nn.Module):
+    def __init__(self):
+        super(EffNetMNIST, self).__init__()
+        
+        self.model_name = 'efficientnet-b0'
+        self.model = EfficientNet.from_pretrained(self.model_name)
+        del self.model._fc
+        self.model._fc = nn.Linear(1280, 10)
+        
+    def forward(self, x):
+        return self.model(x)
 
 class vit_mnist(nn.Module):
     def __init__(self):
@@ -104,7 +117,6 @@ class DDPM():
         self.clf.train()
         self.clf.requires_grad_(True)
         optimizer = torch.optim.Adam(self.clf.parameters(), lr=lr)
-        criteria = nn.NLLLoss()
         for epoch in range(numEpochs):
             print(f"Epoch [{epoch+1}/{numEpochs}]")
             acc =  0
@@ -118,8 +130,7 @@ class DDPM():
                 logits = self.clf(batch)
                 out = logits.argmax(-1)
                 acc += accuracy(out, y)
-                # loss = F.cross_entropy(logits, y)
-                loss = criteria(logits,y)
+                loss = F.cross_entropy(logits, y)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
