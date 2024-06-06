@@ -38,7 +38,7 @@ class Resnet_mnist(nn.Module):
 	def __init__(self, in_channels=1):
 		super(Resnet_mnist, self).__init__()
 
-		self.model = torchvision.models.resnet18(pretrained=True)
+		self.model = torchvision.models.resnet101(pretrained=True)
 		self.model.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False)
 		num_ftrs = self.model.fc.in_features
 		self.model.fc = nn.Linear(num_ftrs, 10)
@@ -81,7 +81,7 @@ class DDPM():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
-        self.clf = vit_mnist().to(self.device)
+        self.clf = EffNetMNIST().to(self.device)
 
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
