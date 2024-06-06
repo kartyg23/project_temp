@@ -104,6 +104,7 @@ class DDPM():
         self.clf.train()
         self.clf.requires_grad_(True)
         optimizer = torch.optim.Adam(self.clf.parameters(), lr=lr)
+        criteria = nn.NLLLoss()
         for epoch in range(numEpochs):
             print(f"Epoch [{epoch+1}/{numEpochs}]")
             acc =  0
@@ -117,7 +118,8 @@ class DDPM():
                 logits = self.clf(batch)
                 out = logits.argmax(-1)
                 acc += accuracy(out, y)
-                loss = F.cross_entropy(logits, y)
+                # loss = F.cross_entropy(logits, y)
+                loss = criteria(logits,y)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
