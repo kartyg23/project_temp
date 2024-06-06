@@ -195,9 +195,7 @@ class DDPM():
             logits = self.clf(self.renorm(x_T))
             out = logits.argmax(-1)
             print(out)
-            log_logits = torch.log(logits + 1e-9)
-            log_logits.sum().backward()
-            # loss.backward()
+            loss.backward()
             grads = x_T.grad.data
             x_T.requires_grad_(False)
             
