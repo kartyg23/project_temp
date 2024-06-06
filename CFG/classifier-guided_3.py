@@ -37,7 +37,7 @@ class Resnet_mnist(nn.Module):
 	def __init__(self, in_channels=1):
 		super(Resnet_mnist, self).__init__()
 
-		self.model = torchvision.models.resnet101(pretrained=True)
+		self.model = torchvision.models.resnet50(pretrained=True)
 		self.model.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False)
 		num_ftrs = self.model.fc.in_features
 		self.model.fc = nn.Linear(num_ftrs, 10)
@@ -195,7 +195,9 @@ class DDPM():
             logits = self.clf(self.renorm(x_T))
             out = logits.argmax(-1)
             print(out)
-            loss.backward()
+            log_logits = torch.log(logits + 1e-9)
+            log_logits.sum().backward()
+            # loss.backward()
             grads = x_T.grad.data
             x_T.requires_grad_(False)
             
