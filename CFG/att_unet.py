@@ -50,9 +50,9 @@ class UNet_Encoder(nn.Module):
     """
     def __init__(self):
         super().__init__()
-        image_channels = 3
+        image_channels = 1
         # down_channels = (64, 128, 256, 512, 1024) 
-        down_channels = (64,128,256)
+        down_channels = (32,64,128)
         time_emb_dim = 32
 
         # Time embedding
@@ -70,7 +70,7 @@ class UNet_Encoder(nn.Module):
                                     time_emb_dim) \
                     for i in range(len(down_channels)-1)])
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(256, 10)
+        self.fc = nn.Linear(128, 10)
 
     def forward(self, x, timestep):
         # Embedd time
@@ -86,6 +86,6 @@ class UNet_Encoder(nn.Module):
         return out
 
 model = UNet_Encoder()
-image = torch.randn(1, 3, 32, 32)
+image = torch.randn(1, 1, 28, 28)
 t = torch.randint(0,1000,(1,))
 print(model(image,t).shape)
