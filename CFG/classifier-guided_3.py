@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from diffusers import UNet2DModel
 import torchvision.transforms as T
 from transformer_package.models import ViT
-from att_unet import UNet_Encoder
+from att_resunet import UNet_Encoder
 
 warnings.filterwarnings("ignore")
 
