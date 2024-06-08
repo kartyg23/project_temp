@@ -192,7 +192,7 @@ class DDPM():
 
             #Calculating Classifier Gradients
             x_T.requires_grad_(True)
-            loss = F.cross_entropy(self.clf(self.renorm(x_T)), torch.LongTensor(args.labels).to(self.device))
+            loss = F.cross_entropy(self.clf(self.renorm(x_T),t), torch.LongTensor(args.labels).to(self.device))
             logits = self.clf(self.renorm(x_T),t)
             out = logits.argmax(-1)
             print(out)
