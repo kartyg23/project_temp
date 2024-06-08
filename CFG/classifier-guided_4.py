@@ -203,15 +203,21 @@ class DDPM():
             # Initialize input for the diffusion model
             x_T.requires_grad_(True)
             x_T_opt = torch.optim.Adam([x_T], lr=args.lr_clf)  # Optimizer for updating the input
-            
+            logStep = args.log_step
             # Iteratively update the input based on classifier predictions
-            for _ in range(num_iterations=500):
+            acc =  0
+            for i in range(500):
                 logits = self.clf(self.renorm(x_T), t)
+                out = logits.argmax(-1)
+                acc += accuracy(out,torch.LongTensor(args.labels).to(self.device))
                 loss = F.cross_entropy(logits, torch.LongTensor(args.labels).to(self.device))
                 # Backpropagate and update input
                 x_T_opt.zero_grad()
                 loss.backward()
                 x_T_opt.step()
+                if (i+1) % logStep == 0 :
+                    tqdm.write(f"Step : {i+1} | Loss : {round(loss.item(), 4)}")
+            tqdm.write(f"Accuracy : {round(acc / 500, 3)}")
             grads = x_T.grad.data
             x_T.requires_grad_(False)
             t = t.squeeze()
