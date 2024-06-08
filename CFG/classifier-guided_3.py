@@ -185,18 +185,21 @@ class DDPM():
         x_Ts = []
         x_T = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) #Starting with random noise
         x_Ts.append(self.tensor2numpy(x_T.cpu()))
-
+        lr = args.lr_clf
+        optimizer = torch.optim.Adam(self.clf.parameters(), lr=lr)
         for t in tqdm(torch.arange(self.timesteps - 1, -1, -1, device = self.device)):
             z = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) 
             epsilon_theta = self.UNet(x_T, t).sample #Predicted Noise
             t = t.unsqueeze(0)
             #Calculating Classifier Gradients
             x_T.requires_grad_(True)
+            optimizer.zero_grad()
             loss = F.cross_entropy(self.clf(self.renorm(x_T),t), torch.LongTensor(args.labels).to(self.device))
             logits = self.clf(self.renorm(x_T),t)
             out = logits.argmax(-1)
             print(out)
             loss.backward()
+            optimizer.step()
             grads = x_T.grad.data
             x_T.requires_grad_(False)
             t = t.squeeze()
