@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from diffusers import UNet2DModel
 import torchvision.transforms as T
 from transformer_package.models import ViT
-from att_resunet import UNet_Encoder
+from att_unet import UNet_Encoder
 
 warnings.filterwarnings("ignore")
 
@@ -189,7 +189,7 @@ class DDPM():
         for t in tqdm(torch.arange(self.timesteps - 1, -1, -1, device = self.device)):
             z = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) 
             epsilon_theta = self.UNet(x_T, t).sample #Predicted Noise
-
+            t = t.unsqueeze(0)
             #Calculating Classifier Gradients
             x_T.requires_grad_(True)
             loss = F.cross_entropy(self.clf(self.renorm(x_T),t), torch.LongTensor(args.labels).to(self.device))
@@ -199,7 +199,7 @@ class DDPM():
             loss.backward()
             grads = x_T.grad.data
             x_T.requires_grad_(False)
-            
+            t = t.squeeze()
             mean = (1 / self.alphas[t].sqrt()) * (x_T  - ((1 - self.alphas[t])/(1 - self.alpha_cumprod[t]).sqrt()) * epsilon_theta) ##DDPM Inference Step
             
             x_T = mean + guidanceScale * self.sigmas[t] * grads  +  z * self.sigmas[t] 
