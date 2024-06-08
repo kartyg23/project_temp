@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from diffusers import UNet2DModel
 import torchvision.transforms as T
 from transformer_package.models import ViT
+from att_unet import UNet_Encoder
 
 warnings.filterwarnings("ignore")
 
@@ -34,10 +35,10 @@ class Classifier(nn.Module):
         return self.layers(x)
 
 class Resnet_mnist(nn.Module):
-	def __init__(self, in_channels=3):
+	def __init__(self, in_channels=1):
 		super(Resnet_mnist, self).__init__()
 
-		self.model = torchvision.models.resnet50(pretrained=True)
+		self.model = torchvision.models.resnet18(pretrained=True)
 		self.model.conv1 = nn.Conv2d(in_channels=in_channels, out_channels=64, kernel_size=7, stride=2, padding=3, bias=False)
 		num_ftrs = self.model.fc.in_features
 		self.model.fc = nn.Linear(num_ftrs, 10)
@@ -68,7 +69,7 @@ class DDPM():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
-        self.clf = Resnet_mnist().to(self.device)
+        self.clf = UNet_Encoder().to(self.device)
 
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
@@ -114,7 +115,7 @@ class DDPM():
                 encodedImages, _ = self.addNoise(batch, ts) 
                 y = y.to(self.device)
                 batch = self.renorm(encodedImages)
-                logits = self.clf(batch)
+                logits = self.clf(batch,ts)
                 out = logits.argmax(-1)
                 acc += accuracy(out, y)
                 loss = F.cross_entropy(logits, y)
@@ -184,21 +185,36 @@ class DDPM():
         x_Ts = []
         x_T = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) #Starting with random noise
         x_Ts.append(self.tensor2numpy(x_T.cpu()))
-
         for t in tqdm(torch.arange(self.timesteps - 1, -1, -1, device = self.device)):
             z = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) 
             epsilon_theta = self.UNet(x_T, t).sample #Predicted Noise
-
-            #Calculating Classifier Gradients
+            t = t.unsqueeze(0)
+            # #Calculating Classifier Gradients
+            # x_T.requires_grad_(True)
+            # optimizer.zero_grad()
+            # loss = F.cross_entropy(self.clf(self.renorm(x_T),t), torch.LongTensor(args.labels).to(self.device))
+            # logits = self.clf(self.renorm(x_T),t)
+            # out = logits.argmax(-1)
+            # print(out)
+            # loss.backward()
+            # optimizer.step()
+            # grads = x_T.grad.data
+            # x_T.requires_grad_(False)
+            # Initialize input for the diffusion model
             x_T.requires_grad_(True)
-            loss = F.cross_entropy(self.clf(self.renorm(x_T)), torch.LongTensor(args.labels).to(self.device))
-            logits = self.clf(self.renorm(x_T))
-            out = logits.argmax(-1)
-            print(out)
-            loss.backward()
+            x_T_opt = torch.optim.Adam([x_T], lr=args.lr_clf)  # Optimizer for updating the input
+            
+            # Iteratively update the input based on classifier predictions
+            for _ in range(num_iterations=500):
+                logits = self.clf(self.renorm(x_T), t)
+                loss = F.cross_entropy(logits, torch.LongTensor(args.labels).to(self.device))
+                # Backpropagate and update input
+                x_T_opt.zero_grad()
+                loss.backward()
+                x_T_opt.step()
             grads = x_T.grad.data
             x_T.requires_grad_(False)
-            
+            t = t.squeeze()
             mean = (1 / self.alphas[t].sqrt()) * (x_T  - ((1 - self.alphas[t])/(1 - self.alpha_cumprod[t]).sqrt()) * epsilon_theta) ##DDPM Inference Step
             
             x_T = mean + guidanceScale * self.sigmas[t] * grads  +  z * self.sigmas[t] 
@@ -244,20 +260,18 @@ if __name__ == "__main__" :
     args = parser.parse_args()
 
 
-    config = dict(sample_size = 32,
-    in_channels = 3,
-    out_channels = 3,
-    layers_per_block = 2,
-    block_out_channels = (64, 128, 256, 512),
-    norm_num_groups = 8,
+    config = dict(sample_size = 28,
+    in_channels = 1,
+    out_channels = 1,
+    layers_per_block = 3,
+    block_out_channels = (32, 64, 128),
+    norm_num_groups = 4,
     down_block_types = (
         "DownBlock2D",
         "DownBlock2D",
         "AttnDownBlock2D",
-        "AttnDownBlock2D",
     ),
     up_block_types = (
-        "AttnUpBlock2D",
         "AttnUpBlock2D",
         "UpBlock2D",
         "UpBlock2D",
@@ -270,13 +284,11 @@ if __name__ == "__main__" :
         clf_checkpoint = args.clf_checkpoint, 
         unet_checkpoint = args.unet_checkpoint
     )
+    dataset = torchvision.datasets.MNIST(root = '../datasets', download = True, transform = ddpm.preprocess)
+    dataloader = torch.utils.data.DataLoader(dataset, shuffle = True, drop_last = True, batch_size = args.batch_size, num_workers = 3)
 
-    
+
     if not args.generate :
-
-        dataset = torchvision.datasets.CIFAR10(root = '../datasets', download = True, transform = ddpm.preprocess)
-        dataloader = torch.utils.data.DataLoader(dataset, shuffle = True, drop_last = True, batch_size = args.batch_size, num_workers = 3)
-
         ddpm.trainCLF(
             numEpochs = args.num_epochs_clf, 
             dataloader = dataloader,
