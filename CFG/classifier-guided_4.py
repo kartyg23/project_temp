@@ -209,7 +209,6 @@ class DDPM():
             for i in range(100):
                 logits = self.clf(self.renorm(x_T), t)
                 out = logits.argmax(-1)
-                print(out)
                 acc += accuracy(out,torch.LongTensor(args.labels).to(self.device))
                 loss = F.cross_entropy(logits, torch.LongTensor(args.labels).to(self.device))
                 # Backpropagate and update input
@@ -218,7 +217,8 @@ class DDPM():
                 x_T_opt.step()
                 if (i+1) % logStep == 0 :
                     tqdm.write(f"Step : {i+1} | Loss : {round(loss.item(), 4)}")
-            tqdm.write(f"Accuracy : {round(acc / 500, 3)}")
+            tqdm.write(f"Accuracy : {round(acc / 100, 3)}")
+            print("predicted labels :",out)
             grads = x_T.grad.data
             x_T.requires_grad_(False)
             t = t.squeeze()
