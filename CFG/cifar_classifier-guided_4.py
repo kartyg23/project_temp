@@ -1,5 +1,6 @@
 import os
 import torch
+import json
 import warnings
 import argparse
 import torch.utils
@@ -10,7 +11,7 @@ from tqdm.auto import tqdm
 import torch.nn.functional as F
 from diffusers import UNet2DModel
 import torchvision.transforms as T
-from att_unet import UNet_Encoder
+from att_unet_cifar import UNet_Encoder
 
 warnings.filterwarnings("ignore")
 
@@ -35,7 +36,7 @@ class DDPM():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
-        self.clf = Resnet_mnist().to(self.device)
+        self.clf = UNet_Encoder().to(self.device)
 
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
@@ -81,7 +82,7 @@ class DDPM():
                 encodedImages, _ = self.addNoise(batch, ts) 
                 y = y.to(self.device)
                 batch = self.renorm(encodedImages)
-                logits = self.clf(batch)
+                logits = self.clf(batch,ts)
                 out = logits.argmax(-1)
                 acc += accuracy(out, y)
                 loss = F.cross_entropy(logits, y)
@@ -148,13 +149,13 @@ class DDPM():
         for t in tqdm(torch.arange(self.timesteps - 1, -1, -1, device = self.device)):
             z = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) 
             epsilon_theta = self.UNet(x_T, t).sample #Predicted Noise
+            t = t.unsqueeze(0)
             x_T.requires_grad_(True)
             x_T_opt = torch.optim.Adam([x_T], lr=args.lr_clf)  # Optimizer for updating the input
             # Iteratively update the input based on classifier predictions
             acc =  0
-            num_steps =50
-            for i in range(num_steps):
-                logits = self.clf(self.renorm(x_T))
+            for i in range(50):
+                logits = self.clf(self.renorm(x_T), t)
                 out = logits.argmax(-1)
                 acc += accuracy(out,torch.LongTensor(args.labels).to(self.device))
                 loss = F.cross_entropy(logits, torch.LongTensor(args.labels).to(self.device))
@@ -163,10 +164,11 @@ class DDPM():
                 loss.backward()
                 x_T_opt.step()
             tqdm.write(f"Step : {i+1} | Loss : {round(loss.item(), 4)}")
-            tqdm.write(f"Accuracy : {round(acc / num_steps, 3)}")
+            tqdm.write(f"Accuracy : {round(acc / 10, 3)}")
             print("predicted labels :",out)
             grads = x_T.grad.data
             x_T.requires_grad_(False)
+            t = t.squeeze()
             mean = (1 / self.alphas[t].sqrt()) * (x_T  - ((1 - self.alphas[t])/(1 - self.alpha_cumprod[t]).sqrt()) * epsilon_theta) ##DDPM Inference Step
             
             x_T = mean + guidanceScale * self.sigmas[t] * grads  +  z * self.sigmas[t] 
@@ -207,26 +209,14 @@ if __name__ == "__main__" :
     parser.add_argument("--lr-clf", type = float, default = 1e-3)
     parser.add_argument("--guidance-scale", type = float, default = 1)
     parser.add_argument("--output-dir", type = str, default = "images")
+    parser.add_argument("--config", type = str, help = "Path of UNet config file in json format")
     parser.add_argument("--generate", action = "store_true", help = "Add this to only generate images using model checkpoints")
     args = parser.parse_args()
 
 
-    config = dict(sample_size = 28,
-    in_channels = 1,
-    out_channels = 1,
-    layers_per_block = 3,
-    block_out_channels = (32, 64, 128),
-    norm_num_groups = 4,
-    down_block_types = (
-        "DownBlock2D",
-        "DownBlock2D",
-        "AttnDownBlock2D",
-    ),
-    up_block_types = (
-        "AttnUpBlock2D",
-        "UpBlock2D",
-        "UpBlock2D",
-    ))
+    with open(args.config) as file :
+        config = json.load(file)
+    
     ddpm = DDPM(
         betaStart = args.beta_start, 
         betaEnd = args.beta_end, 
@@ -235,11 +225,11 @@ if __name__ == "__main__" :
         clf_checkpoint = args.clf_checkpoint, 
         unet_checkpoint = args.unet_checkpoint
     )
-    dataset = torchvision.datasets.MNIST(root = '../datasets', download = True, transform = ddpm.preprocess)
-    dataloader = torch.utils.data.DataLoader(dataset, shuffle = True, drop_last = True, batch_size = args.batch_size, num_workers = 3)
-
 
     if not args.generate :
+        dataset = torchvision.datasets.CIFAR10(root = '../datasets', download = True, transform = ddpm.preprocess)
+        dataloader = torch.utils.data.DataLoader(dataset, shuffle = True, drop_last = True, batch_size = args.batch_size, num_workers = 3)        
+
         ddpm.trainCLF(
             numEpochs = args.num_epochs_clf, 
             dataloader = dataloader,
