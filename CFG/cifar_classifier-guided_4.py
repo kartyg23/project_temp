@@ -19,7 +19,7 @@ def accuracy(inp1, inp2):
     return (inp1 == inp2).sum().item() / len(inp1)
 
 class Resnet_mnist(nn.Module):
-	def __init__(self, in_channels=1):
+	def __init__(self, in_channels=3):
 		super(Resnet_mnist, self).__init__()
 
 		self.model = torchvision.models.resnet18(pretrained=True)
