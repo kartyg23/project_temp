@@ -57,7 +57,7 @@ class DDPM():
                 y = y.to(self.device)
                 ts = torch.randint(0, self.timesteps, (batch.shape[0], ), device = self.device)
                 encodedImages, epsilon = self.addNoise(batch, ts)
-                predictedNoise = self.UNet(encodedImages, ts, class_labels=y).sample
+                predictedNoise = self.UNet(encodedImages, ts).sample
                 optimizer.zero_grad()
                 loss = F.mse_loss(predictedNoise, epsilon)
                 loss.backward()
