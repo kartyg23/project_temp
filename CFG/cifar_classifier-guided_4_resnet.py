@@ -36,7 +36,7 @@ class DDPM():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
-        self.clf = UNet_Encoder().to(self.device)
+        self.clf = Resnet_mnist().to(self.device)
 
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
@@ -82,7 +82,7 @@ class DDPM():
                 encodedImages, _ = self.addNoise(batch, ts) 
                 y = y.to(self.device)
                 batch = self.renorm(encodedImages)
-                logits = self.clf(batch,ts)
+                logits = self.clf(batch)
                 out = logits.argmax(-1)
                 acc += accuracy(out, y)
                 loss = F.cross_entropy(logits, y)
@@ -156,7 +156,7 @@ class DDPM():
             acc =  0
             num_steps = 50
             for i in range(num_steps):
-                logits = self.clf(self.renorm(x_T), t)
+                logits = self.clf(self.renorm(x_T))
                 out = logits.argmax(-1)
                 acc += accuracy(out,torch.LongTensor(args.labels).to(self.device))
                 loss = F.cross_entropy(logits, torch.LongTensor(args.labels).to(self.device))
