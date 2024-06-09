@@ -185,7 +185,6 @@ class DDPM():
             t = t.unsqueeze(0)
             x_T.requires_grad_(True)
             x_T_opt = torch.optim.Adam([x_T], lr=args.lr_clf)  # Optimizer for updating the input
-            logStep = args.log_step
             # Iteratively update the input based on classifier predictions
             acc =  0
             for i in range(10):
@@ -197,8 +196,7 @@ class DDPM():
                 x_T_opt.zero_grad()
                 loss.backward()
                 x_T_opt.step()
-                if (i+1) % logStep == 0 :
-                    tqdm.write(f"Step : {i+1} | Loss : {round(loss.item(), 4)}")
+            tqdm.write(f"Step : {i+1} | Loss : {round(loss.item(), 4)}")
             tqdm.write(f"Accuracy : {round(acc / 10, 3)}")
             print("predicted labels :",out)
             grads = x_T.grad.data
