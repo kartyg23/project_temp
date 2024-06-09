@@ -10,29 +10,12 @@ from tqdm.auto import tqdm
 import torch.nn.functional as F
 from diffusers import UNet2DModel
 import torchvision.transforms as T
-from transformer_package.models import ViT
 from att_unet import UNet_Encoder
 
 warnings.filterwarnings("ignore")
 
 def accuracy(inp1, inp2):
     return (inp1 == inp2).sum().item() / len(inp1)
-
-#Classifier
-class Classifier(nn.Module):
-    def __init__(self, num_classes = 10):
-        super().__init__()
-        self.layers = nn.Sequential(
-            nn.Conv2d(1, 32, 3, stride = (2, 2)),
-            nn.SiLU(),
-            nn.Conv2d(32, 64, 3, stride = (2, 2)),
-            nn.SiLU(),
-            nn.Conv2d(64, 128, 3, stride = (2, 2)),
-            nn.Flatten(),
-            nn.Linear(512, num_classes)
-        )
-    def forward(self, x):
-        return self.layers(x)
 
 class Resnet_mnist(nn.Module):
 	def __init__(self, in_channels=1):
@@ -45,23 +28,6 @@ class Resnet_mnist(nn.Module):
 
 	def forward(self, t):		
 		return self.model(t)
-
-class vit_mnist(nn.Module):
-    def __init__(self):
-        super(vit_mnist,self).__init__()
-        self.image_size = 28
-        self.channel_size = 1
-        self.patch_size = 7
-        self.embed_size = 512
-        self.num_heads = 8
-        self.classes = 10
-        self.num_layers = 3
-        self.hidden_size = 256
-        self.dropout = 0.2
-        self.model = ViT(self.image_size, self.channel_size, self.patch_size, self.embed_size, self.num_heads, self.classes, self.num_layers, self.hidden_size, dropout=self.dropout)
-
-    def forward(self, t):		
-        return self.model(t)
 
 class DDPM():
     def __init__(self, betaStart, betaEnd, timesteps, UNetConfig ,
@@ -187,7 +153,7 @@ class DDPM():
             x_T_opt = torch.optim.Adam([x_T], lr=args.lr_clf)  # Optimizer for updating the input
             # Iteratively update the input based on classifier predictions
             acc =  0
-            for i in range(10):
+            for i in range(50):
                 logits = self.clf(self.renorm(x_T), t)
                 out = logits.argmax(-1)
                 acc += accuracy(out,torch.LongTensor(args.labels).to(self.device))
