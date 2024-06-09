@@ -161,12 +161,6 @@ class DDPM():
                         "beta_end" : self.betaEnd,
                         "timesteps" : self.timesteps,
                     }, self.unet_checkpoint)
-            # images = self.generate(args.num_images,args.guidance_scale)[-1]
-            # for i in range(len(images)):
-            #     if images[i].shape[-1] == 1 :
-            #         Image.fromarray(images[i][:, :, 0]).save(os.path.join(args.output_dir, f"image{i+1}.png"))
-            #     else :
-            #         Image.fromarray(images[i]).save(os.path.join(args.output_dir, f"image{i+1}.png"))
     
     def addNoise(self, images, timesteps): #Forward process
         mean = self.alpha_cumprod.sqrt()[timesteps].view(-1, 1, 1, 1) * images 
@@ -189,24 +183,12 @@ class DDPM():
             z = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) 
             epsilon_theta = self.UNet(x_T, t).sample #Predicted Noise
             t = t.unsqueeze(0)
-            # #Calculating Classifier Gradients
-            # x_T.requires_grad_(True)
-            # optimizer.zero_grad()
-            # loss = F.cross_entropy(self.clf(self.renorm(x_T),t), torch.LongTensor(args.labels).to(self.device))
-            # logits = self.clf(self.renorm(x_T),t)
-            # out = logits.argmax(-1)
-            # print(out)
-            # loss.backward()
-            # optimizer.step()
-            # grads = x_T.grad.data
-            # x_T.requires_grad_(False)
-            # Initialize input for the diffusion model
             x_T.requires_grad_(True)
             x_T_opt = torch.optim.Adam([x_T], lr=args.lr_clf)  # Optimizer for updating the input
             logStep = args.log_step
             # Iteratively update the input based on classifier predictions
             acc =  0
-            for i in range(100):
+            for i in range(10):
                 logits = self.clf(self.renorm(x_T), t)
                 out = logits.argmax(-1)
                 acc += accuracy(out,torch.LongTensor(args.labels).to(self.device))
@@ -217,7 +199,7 @@ class DDPM():
                 x_T_opt.step()
                 if (i+1) % logStep == 0 :
                     tqdm.write(f"Step : {i+1} | Loss : {round(loss.item(), 4)}")
-            tqdm.write(f"Accuracy : {round(acc / 100, 3)}")
+            tqdm.write(f"Accuracy : {round(acc / 10, 3)}")
             print("predicted labels :",out)
             grads = x_T.grad.data
             x_T.requires_grad_(False)
@@ -257,7 +239,6 @@ if __name__ == "__main__" :
     parser.add_argument("--lr", type = float, default = 1e-3)
     parser.add_argument("--num-epochs", type = int, default = 5)
     parser.add_argument("--num-images", type = int, default = 2)
-    # parser.add_argument("--label", type = int, default = 8)
     parser.add_argument("--labels", type=str_to_int_list, required=True, help="Comma-separated list of integers")
     parser.add_argument("--num-epochs-clf", type = int, default = 5)
     parser.add_argument("--lr-clf", type = float, default = 1e-3)
