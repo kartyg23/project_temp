@@ -150,31 +150,38 @@ class DDPM():
         for t in tqdm(torch.arange(self.timesteps - 1, -1, -1, device = self.device)):
             z = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) 
             epsilon_theta = self.UNet(x_T, t).sample #Predicted Noise
-            t = t.unsqueeze(0)
-            x_T.requires_grad_(True)
-            x_T_opt = torch.optim.Adam([x_T], lr=args.lr_clf)  # Optimizer for updating the input
-            # Iteratively update the input based on classifier predictions
-            acc =  0
-            num_steps = 50
-            for i in range(num_steps):
-                logits, __, __, __ = self.clf(self.renorm(x_T))
-                out = logits.argmax(-1)
-                acc += accuracy(out,torch.LongTensor(args.labels).to(self.device))
-                loss = F.cross_entropy(logits, torch.LongTensor(args.labels).to(self.device))
-                # Backpropagate and update input
-                x_T_opt.zero_grad()
-                loss.backward()
-                x_T_opt.step()
-            tqdm.write(f"Step : {i+1} | Loss : {round(loss.item(), 4)}")
-            tqdm.write(f"Accuracy : {round(acc / num_steps, 3)}")
-            print("predicted labels :",out)
-            grads = x_T.grad.data
-            x_T.requires_grad_(False)
-            t = t.squeeze()
-            mean = (1 / self.alphas[t].sqrt()) * (x_T  - ((1 - self.alphas[t])/(1 - self.alpha_cumprod[t]).sqrt()) * epsilon_theta) ##DDPM Inference Step
-            
-            x_T = mean + guidanceScale * self.sigmas[t] * grads  +  z * self.sigmas[t] 
-            x_Ts.append(self.tensor2numpy(x_T.cpu()))
+            if(t<=200):
+                t = t.unsqueeze(0)
+                x_T.requires_grad_(True)
+                x_T_opt = torch.optim.Adam([x_T], lr=args.lr_clf)  # Optimizer for updating the input
+                # Iteratively update the input based on classifier predictions
+                acc =  0
+                num_steps = 50
+                for i in range(num_steps):
+                    logits, __, __, __ = self.clf(self.renorm(x_T))
+                    out = logits.argmax(-1)
+                    acc += accuracy(out,torch.LongTensor(args.labels).to(self.device))
+                    loss = F.cross_entropy(logits, torch.LongTensor(args.labels).to(self.device))
+                    # Backpropagate and update input
+                    x_T_opt.zero_grad()
+                    loss.backward()
+                    x_T_opt.step()
+                tqdm.write(f"Step : {i+1} | Loss : {round(loss.item(), 4)}")
+                tqdm.write(f"Accuracy : {round(acc / num_steps, 3)}")
+                print("predicted labels :",out)
+                grads = x_T.grad.data
+                x_T.requires_grad_(False)
+                t = t.squeeze()
+                mean = (1 / self.alphas[t].sqrt()) * (x_T  - ((1 - self.alphas[t])/(1 - self.alpha_cumprod[t]).sqrt()) * epsilon_theta) ##DDPM Inference Step
+                
+                x_T = mean + guidanceScale * self.sigmas[t] * grads  +  z * self.sigmas[t] 
+                x_Ts.append(self.tensor2numpy(x_T.cpu()))
+            else:
+                mean = (1 / self.alphas[t].sqrt()) * (x_T  - ((1 - self.alphas[t])/(1 - self.alpha_cumprod[t]).sqrt()) * epsilon_theta) ##DDPM Inference Step
+                
+                x_T = mean +  z * self.sigmas[t] 
+                x_Ts.append(self.tensor2numpy(x_T.cpu()))
+
         return x_Ts
     
     def tensor2numpy(self, images):
