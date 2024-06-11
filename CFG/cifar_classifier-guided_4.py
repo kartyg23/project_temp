@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from diffusers import UNet2DModel
 import torchvision.transforms as T
 from att_unet_cifar import UNet_Encoder
+from model1 import AttnVGG_before
 
 warnings.filterwarnings("ignore")
 
@@ -36,7 +37,7 @@ class DDPM():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
-        self.clf = UNet_Encoder().to(self.device)
+        self.clf = AttnVGG_before(im_size=32,num_classes=10).to(self.device)
 
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
