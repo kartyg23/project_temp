@@ -79,7 +79,7 @@ class DDPM():
             for i, (batch, y) in tqdm(enumerate(dataloader), total = len(dataloader)):
 
                 batch = batch.to(self.device)
-                ts = torch.randint(0, 300, (batch.shape[0], ), device = self.device)
+                ts = torch.randint(0, 200, (batch.shape[0], ), device = self.device)
                 encodedImages, _ = self.addNoise(batch, ts) 
                 y = y.to(self.device)
                 batch = self.renorm(encodedImages)
@@ -240,13 +240,13 @@ if __name__ == "__main__" :
             lr = args.lr_clf
         )
         
-        ddpm.train(
-            dataloader = dataloader, 
-            numEpochs = args.num_epochs, 
-            logStep = args.log_step, 
-            checkpointStep = args.checkpoint_step, 
-            lr = args.lr
-        )
+        # ddpm.train(
+        #     dataloader = dataloader, 
+        #     numEpochs = args.num_epochs, 
+        #     logStep = args.log_step, 
+        #     checkpointStep = args.checkpoint_step, 
+        #     lr = args.lr
+        # )
 
     images = ddpm.generate(args.num_images, args.guidance_scale)[-1]
     
