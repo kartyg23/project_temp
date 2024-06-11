@@ -11,7 +11,8 @@ from tqdm.auto import tqdm
 import torch.nn.functional as F
 from diffusers import UNet2DModel
 import torchvision.transforms as T
-
+from att_unet_cifar import UNet_Encoder
+from model1 import AttnVGG_before
 
 warnings.filterwarnings("ignore")
 
@@ -36,7 +37,7 @@ class DDPM():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
-        self.clf = Resnet_mnist().to(self.device)
+        self.clf = AttnVGG_before(im_size=32,num_classes=10).to(self.device)
 
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
@@ -82,7 +83,7 @@ class DDPM():
                 encodedImages, _ = self.addNoise(batch, ts) 
                 y = y.to(self.device)
                 batch = self.renorm(encodedImages)
-                logits = self.clf(batch)
+                logits, __, __, __ = self.clf(batch)
                 out = logits.argmax(-1)
                 acc += accuracy(out, y)
                 loss = F.cross_entropy(logits, y)
@@ -156,7 +157,7 @@ class DDPM():
             acc =  0
             num_steps = 50
             for i in range(num_steps):
-                logits = self.clf(self.renorm(x_T))
+                logits, __, __, __ = self.clf(self.renorm(x_T))
                 out = logits.argmax(-1)
                 acc += accuracy(out,torch.LongTensor(args.labels).to(self.device))
                 loss = F.cross_entropy(logits, torch.LongTensor(args.labels).to(self.device))
