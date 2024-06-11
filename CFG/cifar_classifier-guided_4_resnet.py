@@ -78,7 +78,7 @@ class DDPM():
             for i, (batch, y) in tqdm(enumerate(dataloader), total = len(dataloader)):
 
                 batch = batch.to(self.device)
-                ts = torch.randint(0, self.timesteps, (batch.shape[0], ), device = self.device)
+                ts = torch.randint(0, 300, (batch.shape[0], ), device = self.device)
                 encodedImages, _ = self.addNoise(batch, ts) 
                 y = y.to(self.device)
                 batch = self.renorm(encodedImages)
