@@ -38,7 +38,7 @@ class DDPM():
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
         self.clf = UNet_Encoder().to(self.device)
-
+        self.clf_timesteps = 100
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
         self.timesteps = timesteps
@@ -79,7 +79,7 @@ class DDPM():
             for i, (batch, y) in tqdm(enumerate(dataloader), total = len(dataloader)):
 
                 batch = batch.to(self.device)
-                ts = torch.randint(0, 200, (batch.shape[0], ), device = self.device)
+                ts = torch.randint(0, self.clf_timesteps, (batch.shape[0], ), device = self.device)
                 encodedImages, _ = self.addNoise(batch, ts) 
                 y = y.to(self.device)
                 batch = self.renorm(encodedImages)
@@ -150,7 +150,7 @@ class DDPM():
         for t in tqdm(torch.arange(self.timesteps - 1, -1, -1, device = self.device)):
             z = torch.randn(numImages, self.channels, self.size, self.size, device = self.device) 
             epsilon_theta = self.UNet(x_T, t).sample #Predicted Noise
-            if(t<=200):
+            if(t<=self.clf_timesteps):
                 t = t.unsqueeze(0)
                 x_T.requires_grad_(True)
                 x_T_opt = torch.optim.Adam([x_T], lr=args.lr_clf)  # Optimizer for updating the input
