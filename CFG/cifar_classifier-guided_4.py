@@ -32,13 +32,13 @@ class Resnet_mnist(nn.Module):
 		return self.model(t)
 
 class DDPM():
-    def __init__(self, betaStart, betaEnd, timesteps, UNetConfig ,
+    def __init__(self, betaStart, betaEnd, timesteps,clf_timesteps, UNetConfig ,
                  clf_checkpoint = None, unet_checkpoint = None):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
         self.clf = UNet_Encoder().to(self.device)
-        self.clf_timesteps = 100
+        self.clf_timesteps = clf_timesteps
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
         self.timesteps = timesteps
@@ -201,6 +201,7 @@ def str_to_int_list(s):
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser()
     parser.add_argument("--timesteps", type = int, default = 100, help = "Number of timesteps")
+    parser.add_argument("--clf_timesteps", type = int, default = 100, help = "Number of classifier timesteps")
     parser.add_argument("--beta-start", type = float, default = 1e-4)
     parser.add_argument("--beta-end", type = float, default = 1e-1)
     parser.add_argument("--log-step", type = int, default = 50)
@@ -228,6 +229,7 @@ if __name__ == "__main__" :
         betaStart = args.beta_start, 
         betaEnd = args.beta_end, 
         timesteps = args.timesteps, 
+        clf_timesteps = args.clf_timesteps,
         UNetConfig = config, 
         clf_checkpoint = args.clf_checkpoint, 
         unet_checkpoint = args.unet_checkpoint
