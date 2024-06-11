@@ -158,7 +158,7 @@ class DDPM():
                 acc =  0
                 num_steps = 50
                 for i in range(num_steps):
-                    logits, __, __, __ = self.clf(self.renorm(x_T))
+                    logits = self.clf(self.renorm(x_T), t)
                     out = logits.argmax(-1)
                     acc += accuracy(out,torch.LongTensor(args.labels).to(self.device))
                     loss = F.cross_entropy(logits, torch.LongTensor(args.labels).to(self.device))
@@ -178,9 +178,8 @@ class DDPM():
                 x_Ts.append(self.tensor2numpy(x_T.cpu()))
             else:
                 mean = (1 / self.alphas[t].sqrt()) * (x_T  - ((1 - self.alphas[t])/(1 - self.alpha_cumprod[t]).sqrt()) * epsilon_theta) ##DDPM Inference Step
-                
                 x_T = mean +  z * self.sigmas[t] 
-                x_Ts.append(self.tensor2numpy(x_T.cpu()))
+                x_Ts.append(self.tensor2numpy(x_T.cpu()))                
         return x_Ts
     
     def tensor2numpy(self, images):
