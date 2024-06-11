@@ -37,7 +37,7 @@ class DDPM():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         #Initializing Models
         self.UNet = UNet2DModel(**UNetConfig).to(self.device)
-        self.clf = AttnVGG_before(im_size=32,num_classes=10).to(self.device)
+        self.clf = UNet_Encoder(im_size=32,num_classes=10).to(self.device)
 
         self.betaStart = betaStart
         self.betaEnd = betaEnd 
