@@ -247,13 +247,13 @@ if __name__ == "__main__" :
             lr = args.lr_clf
         )
         
-        # ddpm.train(
-        #     dataloader = dataloader, 
-        #     numEpochs = args.num_epochs, 
-        #     logStep = args.log_step, 
-        #     checkpointStep = args.checkpoint_step, 
-        #     lr = args.lr
-        # )
+        ddpm.train(
+            dataloader = dataloader, 
+            numEpochs = args.num_epochs, 
+            logStep = args.log_step, 
+            checkpointStep = args.checkpoint_step, 
+            lr = args.lr
+        )
 
     images = ddpm.generate(args.num_images, args.guidance_scale)[-1]
     
