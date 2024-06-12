@@ -13,7 +13,7 @@ class Block(nn.Module):
         self.bnorm2 = nn.BatchNorm2d(out_ch)
         self.relu  = nn.ReLU()
         
-    def forward(self, x, t, ):
+    def forward(self, x, t):
         # First Conv
         h = self.bnorm1(self.relu(self.conv1(x)))
         # Time embedding
@@ -40,7 +40,6 @@ class SinusoidalPositionEmbeddings(nn.Module):
         embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
         embeddings = time[:, None] * embeddings[None, :]
         embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
-        # TODO: Double check the ordering here
         return embeddings
 
 
@@ -50,9 +49,9 @@ class UNet_Encoder(nn.Module):
     """
     def __init__(self):
         super().__init__()
-        image_channels = 3
-        down_channels = (64, 128, 256) 
-        # down_channels = (32,64,128)
+        image_channels = 1
+        # down_channels = (64, 128, 256, 512, 1024) 
+        down_channels = (32,64,128)
         time_emb_dim = 32
 
         # Time embedding
@@ -69,17 +68,10 @@ class UNet_Encoder(nn.Module):
         self.downs = nn.ModuleList([Block(down_channels[i], down_channels[i+1], \
                                     time_emb_dim) \
                     for i in range(len(down_channels)-1)])
-        self.norm = nn.LayerNorm(256)
-        self.scale = nn.Parameter(torch.zeros(1))
-        self.mhatt = nn.MultiheadAttention(256, num_heads=1 ,batch_first=True)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(256, 10)
-    def attentionlayer(self,x):
+        self.fc = nn.Linear(128, 10)
+    def attention_layer(self,x):
         bs, c, h, w = x.shape
-        x_att = x.reshape(bs, c, h*w ).transpose(1,2)
-        x_att = self.norm(x_att)
-        att_output,_ = self.mhatt(x_att,x_att,x_att)
-        return att_output.transpose(1,2).reshape(bs , c, h, w)
 
     def forward(self, x, timestep):
         # Embedd time
@@ -89,12 +81,10 @@ class UNet_Encoder(nn.Module):
         # Unet
         for down in self.downs:
             x = down(x, t)
-        # x = self.scale * self.attentionlayer(x) + x
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        out = self.fc(x)
-        return out
-
+        # x = self.avgpool(x)
+        # x = torch.flatten(x, 1)
+        # out = self.fc(x)
+        return x
 model = UNet_Encoder()
 image = torch.randn(1, 3, 32, 32)
 t = torch.randint(0,1000,(1,))
