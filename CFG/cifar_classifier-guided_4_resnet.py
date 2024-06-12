@@ -78,10 +78,10 @@ class DDPM():
             for i, (batch, y) in tqdm(enumerate(dataloader), total = len(dataloader)):
 
                 batch = batch.to(self.device)
-                ts = torch.randint(0, 200, (batch.shape[0], ), device = self.device)
-                encodedImages, _ = self.addNoise(batch, ts) 
+                # ts = torch.randint(0, 200, (batch.shape[0], ), device = self.device)
+                # encodedImages, _ = self.addNoise(batch, ts) 
                 y = y.to(self.device)
-                batch = self.renorm(encodedImages)
+                batch = self.renorm(batch)
                 logits = self.clf(batch)
                 out = logits.argmax(-1)
                 acc += accuracy(out, y)
