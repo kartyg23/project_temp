@@ -168,6 +168,7 @@ class DDPM():
                 detached_log_probs = log_probs.detach()
                 x_T_opt.step()
                 x_T_opt.zero_grad()
+                detached_log_probs.requires_grad = True
                 # Compute gradients of detached_log_probs with respect to input_data
                 grads = torch.autograd.grad(detached_log_probs, x_T, retain_graph=True)
             tqdm.write(f"Step : {i+1} | Loss : {round(loss.item(), 4)}")
